@@ -142,7 +142,7 @@ if __name__ == '__main__':
                             'captions'       : 'Path to a file with captions',
                             'subtitles'      : 'Path to a file with subtitles',
                             'fonts'          : 'Path to a directory with fonts (Optional)',
-                            'ffmpeg'         : 'FFmpeg utility path (Optional, if the utility is registered in the PATH environment variable)'
+                            'ffmpeg'         : 'FFmpeg utility path (Optional, if the utility is registered in the PATH environment variable)',
                             'release_name'   : 'Release name',
                             'serial_number'  : 'Serial number',
                             'quality'        : 'Quality of video file',
