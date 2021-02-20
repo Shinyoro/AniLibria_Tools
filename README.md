@@ -9,6 +9,8 @@
   * [FFmpeg](https://ffmpeg.org/download.html)
   
 ## Готовый архив с исполняемыми файлами
+  * [Windows](https://github.com/Shinyoro/AniLibria_Tools/releases/download/v1.0/anilibria-tools-windows.zip)
+  * [GNU/Linux](https://github.com/Shinyoro/AniLibria_Tools/releases/download/v1.0/anilibria-tools-gnu-linux.tar.gz)
   
 ## Использование
 
