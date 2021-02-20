@@ -130,7 +130,7 @@ if __name__ == '__main__':
                             'release_name'   : 'Название релиза',
                             'serial_number'  : 'Номер серии',
                             'quality'        : 'Качество видео файла',
-                            'resolution'     : 'Разрешение видео файла', },
+                            'resolution'     : 'Разрешение видео файла' },
                         
                         'interrupt' : 'Прервано пользователем!' },
                      
@@ -146,7 +146,7 @@ if __name__ == '__main__':
                             'release_name'   : 'Release name',
                             'serial_number'  : 'Serial number',
                             'quality'        : 'Quality of video file',
-                            'resolution'     : 'Resolution of video file', },
+                            'resolution'     : 'Resolution of video file' },
                          
                         'interrupt' : 'Interrupted by user!' }
                     }
