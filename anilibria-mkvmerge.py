@@ -16,6 +16,7 @@ from sys import platform
 # quality - качество.
 # resolution - разрешение.
 # dir_fonts - папка со шрифтами.
+# ffmpeg - путь к утилите FFmpeg / FFmpeg utility path
 def mkvmerge(original,
              voiceover,
              captions,
@@ -24,14 +25,17 @@ def mkvmerge(original,
              serial_number,
              quality,
              resolution,
-             dir_fonts=None):
+             dir_fonts=None,
+             ffmpeg=None):
     
     # Сборка команды для FFmpeg / Build command for FFmpeg.
     # Позиция потоков и метаданные сделаны по стандартам AniLibria.TV / Placements and metadata are made according to AniLibria.TV standards.
-    if platform == 'win32':
-        command = ['ffmpeg.exe']
-    else:
+    
+    # Проверка, указан ли путь к утилите FFmpeg / Checking if the path to FFmpeg is specified.
+    if not ffmpeg:
         command = ['ffmpeg']
+    else:
+        command = [ffmpeg]
     
     command += [
                
@@ -70,6 +74,14 @@ def mkvmerge(original,
     
     # Проверка наличия шрифтов и подключение их, если они есть / Checking for Fonts and connect them, if any.
     if dir_fonts:
+        
+        if platform == 'win32':
+            if dir_fonts[-1] != '\\':
+                dir_fonts += '\\'
+        else:
+            if dir_fonts[-1] != '/':
+                dir_fonts += '/'
+                
         fonts = listdir(dir_fonts)
         
         for font in fonts:
@@ -79,7 +91,8 @@ def mkvmerge(original,
                         'mimetype=application/x-truetype-font']
     
     # Завершающий этап сборки команды / The final stage of command building.
-    # Название готового mkv файла будет назван по стандартам AniLibria.TV / The name of the finished mkv file will be named according to AniLibria.TV standards.
+    # Название готового mkv файла будет назван по стандартам AniLibria.TV.
+    # The name of the finished mkv file will be named according to AniLibria.TV standards.
     command += ['-c', 'copy',
                 
                 release_name.replace(' ', '_') +
@@ -112,28 +125,30 @@ if __name__ == '__main__':
                             'voiceover'      : 'Путь к файлу с озвучкой',
                             'captions'       : 'Путь к файлу с надписями',
                             'subtitles'      : 'Путь к файлу с субтитрами',
-                            'fonts'          : 'Путь к директории со шрифтами',
+                            'fonts'          : 'Путь к директории со шрифтами (необязательно)',
+                            'ffmpeg'         : 'Путь к утилите FFmpeg (необязательно, если утилита прописана в переменное окружение PATH)',
                             'release_name'   : 'Название релиза',
                             'serial_number'  : 'Номер серии',
-                            'quality'        : 'Качество',
-                            'resolution'     : 'Разрешение' },
+                            'quality'        : 'Качество видео файла',
+                            'resolution'     : 'Разрешение видео файла', },
                         
                         'interrupt' : 'Прервано пользователем!' },
                      
                      'en' : {
                          
-                         'help' : {
+                        'help' : {
                             'original_video' : 'Path to a original video file',
                             'voiceover'      : 'Path to a file of voice acting',
                             'captions'       : 'Path to a file with captions',
                             'subtitles'      : 'Path to a file with subtitles',
-                            'fonts'          : 'Path to a directory with fonts',
+                            'fonts'          : 'Path to a directory with fonts (Optional)',
+                            'ffmpeg'         : 'FFmpeg utility path (Optional, if the utility is registered in the PATH environment variable)'
                             'release_name'   : 'Release name',
                             'serial_number'  : 'Serial number',
                             'quality'        : 'Quality of video file',
-                            'resolution'     : 'Resolution of video file' },
+                            'resolution'     : 'Resolution of video file', },
                          
-                         'interrupt' : 'Interrupted by user!' }
+                        'interrupt' : 'Interrupted by user!' }
                     }
 
     arguments_parser = ArgumentParser()
@@ -143,6 +158,7 @@ if __name__ == '__main__':
     arguments_parser.add_argument('-c', '--captions', type=str, required=True, help=localization[lang]['help']['captions'])
     arguments_parser.add_argument('-s', '--subtitles', type=str, required=True, help=localization[lang]['help']['subtitles'])
     arguments_parser.add_argument('-f', '--fonts', type=str, default=None, help=localization[lang]['help']['fonts'])
+    arguments_parser.add_argument('-ff', '--ffmpeg', type=str, default=None, help=localization[lang]['help']['ffmpeg'])
     arguments_parser.add_argument('release_name', type=str, help=localization[lang]['help']['release_name'])
     arguments_parser.add_argument('serial_number', type=str, help=localization[lang]['help']['serial_number'])
     arguments_parser.add_argument('quality', type=str, help=localization[lang]['help']['quality'])
@@ -158,7 +174,8 @@ if __name__ == '__main__':
             argv.serial_number,
             argv.quality,
             argv.resolution,
-            argv.fonts]
+            argv.fonts,
+            argv.ffmpeg]
         
     if platform == 'win32':
         for arg in argv:
