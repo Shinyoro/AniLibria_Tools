@@ -5,7 +5,9 @@ from subprocess import call
 from os import listdir
 from sys import platform
 
-# Сборка mkv. Требуется утилита FFmpeg / Build mkv. Requires utility FFmpeg.
+# Сборка mkv. Требуется консольная утилита mkvmerge из набора инструментов mkvtoolnix. 
+# Build mkv. Requires the mkvmerge console utility from the mkvtoolnix toolbox.
+
 # Аргументы: / Arguments:
 # original - оригинальный файл / original file.
 # voiceover - русская озвучка / russian voiceover.
@@ -15,8 +17,9 @@ from sys import platform
 # serial_number - номер серии.
 # quality - качество.
 # resolution - разрешение.
-# dir_fonts - папка со шрифтами.
-# ffmpeg - путь к утилите FFmpeg / FFmpeg utility path
+# dir_fonts - папка со шрифтами (необязательно) / (optional).
+# original_raw - название оригинального Raw для метаданных (необязательно) / Original name Raw for metadata (optional).
+# mkvmerge - путь к утилите mkvmerge (необязательно) / mkvmerge utility path (optional).
 def mkvmerge(original,
              voiceover,
              captions,
@@ -26,51 +29,61 @@ def mkvmerge(original,
              quality,
              resolution,
              dir_fonts=None,
-             ffmpeg=None):
+             original_raw=None,
+             mkvmerge=None):
     
-    # Сборка команды для FFmpeg / Build command for FFmpeg.
+    # Сборка команды для mkvmerge / Build command for mkvmerge.
     # Позиция потоков и метаданные сделаны по стандартам AniLibria.TV / Placements and metadata are made according to AniLibria.TV standards.
     
-    # Проверка, указан ли путь к утилите FFmpeg / Checking if the path to FFmpeg is specified.
-    if not ffmpeg:
-        command = ['ffmpeg']
+    # Проверка, указан ли путь к утилите mkvmerge / Checking if the path to mkvmerge is specified.
+    if not mkvmerge:
+        command = ['mkvmerge']
     else:
-        command = [ffmpeg]
+        command = [mkvmerge]
+    
+    # Проверка, указано ли название оригинального Raw / Checking if the name of the original Raw is specified.
+    if not original_raw:
+        original_raw = 'Original'
+    else:
+        original_raw = 'Original [' + original_raw + ']'
     
     command += [
                
-               # Входные файлы / Input files
-               '-i', original,
-               '-i', voiceover,
-               '-i', captions,
-               '-i', subtitles,
+               # Входные файлы / Input files.
                
-               # Позиции потоков. 0(номер файла):0(номер потока файла) / Positions of streams. 0(file number):0(file stream number).
-               '-map', '0:0',
-               '-map', '1',
-               '-map', '0:1',
-               '-map', '2',
-               '-map', '3',
+               # Метаданные по стандартам AniLibria.TV. <метаданные> <поток исходного файла>:<значение>.
+               # Metadata according to AniLibria.TV standards. <metadata> <source file stream>: <value>.
+               # --default-track - поток воспроизводимый по умолчанию.
+               # --forced-track - принудительно воспроизводить поток.
+               # --language - язык.
+               # --track-name - заголовок потока / Stream title.
+               '--default-track', '0:yes',
+               '--forced-track',  '0:yes',
+               '--language',      '0:jpn',
+               '--language',      '1:jpn',
+               '--track-name',    '0:' + original_raw,
+               '--track-name',    '1:' + original_raw,
+               original,
                
-               # Метаданные по стандартам AniLibria.TV. s:0(номер потока выходного файла).
-               # Metadata according to AniLibria.TV standards. s:0(stream number of the output file).
-               # language - язык потока.
-               # title - название потока.
-               '-metadata:s:0', 'language=jpn',
-               '-metadata:s:0', 'title=' + release_name + ' - ' + serial_number,
-               '-metadata:s:1', 'language=rus',
-               '-metadata:s:1', 'title=AniLibria.TV',
-               '-metadata:s:2', 'language=jpn',
-               '-metadata:s:2', 'title=Оригинал',
-               '-metadata:s:3', 'language=rus',
-               '-metadata:s:3', 'title=Надписи',
-               '-metadata:s:4', 'language=rus',
-               '-metadata:s:4', 'title=Субтитры',
+               '--default-track', '0:yes',
+               '--forced-track',  '0:yes',
+               '--language',      '0:rus',
+               '--track-name',    '0:AniLibria.TV',
+               voiceover,
                
-               # Потоки воспроизводимые по умолчанию / Streams playable by default.
-               '-disposition:s:0', 'default',
-               '-disposition:s:1', 'default',
-               '-disposition:s:3', 'default']
+               '--default-track', '0:yes',
+               '--forced-track',  '0:yes',
+               '--language',      '0:rus',
+               '--track-name',    '0:Надписи [AniLibria.TV]',
+               captions,
+               
+               '--language',      '0:rus',
+               '--track-name',    '0:Полные [AniLibria.TV]',
+               subtitles,
+               
+               # Позиции потоков / Positions of streams.
+               # --track-order <номер исходного файла>:<номер потока>,... / --track-order <source file number>:<stream number>, ...
+               '--track-order', '0:0,1:0,0:1,2:0,3:0']
     
     # Проверка наличия шрифтов и подключение их, если они есть / Checking for Fonts and connect them, if any.
     if dir_fonts:
@@ -85,15 +98,13 @@ def mkvmerge(original,
         fonts = listdir(dir_fonts)
         
         for font in fonts:
-            command += ['-attach',
-                        dir_fonts+font,
-                        '-metadata:s:t:' + str(fonts.index(font)),
-                        'mimetype=application/x-truetype-font']
+            command += ['--attachment-mime-type', 'application/x-truetype-font',
+                        '--attach-file', dir_fonts+font,]
     
     # Завершающий этап сборки команды / The final stage of command building.
     # Название готового mkv файла будет назван по стандартам AniLibria.TV.
     # The name of the finished mkv file will be named according to AniLibria.TV standards.
-    command += ['-c', 'copy',
+    command += ['-o',
                 
                 release_name.replace(' ', '_') +
                 '_[' +
@@ -106,7 +117,7 @@ def mkvmerge(original,
     # Возвращает статус код процесса / Returns the status code of the process.
     return call(command)
 
-# Если был запущен скрипт / If the script was run
+# Если был запущен скрипт / If the script was run.
 if __name__ == '__main__':
     
     # Импорт модулей и обработка входных аргументов / Importing Modules and Handling Input Arguments.
@@ -115,38 +126,40 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     from locale import getdefaultlocale
     
-    # Локализация
+    # Локализация.
     lang = getdefaultlocale()[0][:2]
     
     localization = { 'ru' : {
         
                         'help' : {
-                            'original_video' : 'Путь к оригинальному видео файлу',
-                            'voiceover'      : 'Путь к файлу с озвучкой',
-                            'captions'       : 'Путь к файлу с надписями',
-                            'subtitles'      : 'Путь к файлу с субтитрами',
-                            'fonts'          : 'Путь к директории со шрифтами (необязательно)',
-                            'ffmpeg'         : 'Путь к утилите FFmpeg (необязательно, если утилита прописана в переменное окружение PATH)',
-                            'release_name'   : 'Название релиза',
-                            'serial_number'  : 'Номер серии',
-                            'quality'        : 'Качество видео файла',
-                            'resolution'     : 'Разрешение видео файла' },
+                            'original_video' : 'Путь к оригинальному видеофайлу.',
+                            'original_raw'   : 'Название оригинального Raw для метаданных.',
+                            'voiceover'      : 'Путь к файлу с озвучкой.',
+                            'captions'       : 'Путь к файлу с надписями.',
+                            'subtitles'      : 'Путь к файлу с субтитрами.',
+                            'fonts'          : 'Путь к директории со шрифтами (необязательно).',
+                            'mkvmerge'       : 'Путь к утилите mkvmerge (необязательно, если утилита прописана в переменное окружение PATH).',
+                            'release_name'   : 'Название релиза.',
+                            'serial_number'  : 'Номер серии.',
+                            'quality'        : 'Качество видеофайла.',
+                            'resolution'     : 'Разрешение видеофайла.' },
                         
                         'interrupt' : 'Прервано пользователем!' },
                      
                      'en' : {
                          
                         'help' : {
-                            'original_video' : 'Path to a original video file',
-                            'voiceover'      : 'Path to a file of voice acting',
-                            'captions'       : 'Path to a file with captions',
-                            'subtitles'      : 'Path to a file with subtitles',
-                            'fonts'          : 'Path to a directory with fonts (Optional)',
-                            'ffmpeg'         : 'FFmpeg utility path (Optional, if the utility is registered in the PATH environment variable)',
-                            'release_name'   : 'Release name',
-                            'serial_number'  : 'Serial number',
-                            'quality'        : 'Quality of video file',
-                            'resolution'     : 'Resolution of video file' },
+                            'original_video' : 'Path to a original videofile.',
+                            'original_raw'   : 'Original Raw name for metadata.',
+                            'voiceover'      : 'Path to a file of voice acting.',
+                            'captions'       : 'Path to a file with captions.',
+                            'subtitles'      : 'Path to a file with subtitles.',
+                            'fonts'          : 'Path to a directory with fonts (Optional).',
+                            'mkvmerge'       : 'mkvmerge utility path (Optional, if the utility is registered in the PATH environment variable).',
+                            'release_name'   : 'Release name.',
+                            'serial_number'  : 'Serial number.',
+                            'quality'        : 'Quality of videofile.',
+                            'resolution'     : 'Resolution of videofile.' },
                          
                         'interrupt' : 'Interrupted by user!' }
                     }
@@ -154,11 +167,12 @@ if __name__ == '__main__':
     arguments_parser = ArgumentParser()
 
     arguments_parser.add_argument('-o', '--original-video', type=str, required=True, help=localization[lang]['help']['original_video'])
+    arguments_parser.add_argument('-r', '--original-raw', type=str, default=None, help=localization[lang]['help']['original_raw'])
     arguments_parser.add_argument('-v', '--voiceover', type=str, required=True, help=localization[lang]['help']['voiceover'])
     arguments_parser.add_argument('-c', '--captions', type=str, required=True, help=localization[lang]['help']['captions'])
     arguments_parser.add_argument('-s', '--subtitles', type=str, required=True, help=localization[lang]['help']['subtitles'])
     arguments_parser.add_argument('-f', '--fonts', type=str, default=None, help=localization[lang]['help']['fonts'])
-    arguments_parser.add_argument('-ff', '--ffmpeg', type=str, default=None, help=localization[lang]['help']['ffmpeg'])
+    arguments_parser.add_argument('-m', '--mkvmerge', type=str, default=None, help=localization[lang]['help']['mkvmerge'])
     arguments_parser.add_argument('release_name', type=str, help=localization[lang]['help']['release_name'])
     arguments_parser.add_argument('serial_number', type=str, help=localization[lang]['help']['serial_number'])
     arguments_parser.add_argument('quality', type=str, help=localization[lang]['help']['quality'])
@@ -175,12 +189,13 @@ if __name__ == '__main__':
             argv.quality,
             argv.resolution,
             argv.fonts,
-            argv.ffmpeg]
+            argv.original_raw,
+            argv.mkvmerge]
         
     if platform == 'win32':
-        for arg in argv:
+        for idx, arg in enumerate(argv):
             if arg:
-                argv[argv.index(arg)] = arg.replace('\\', '\\\\')
+                argv[idx] = arg.replace('\\', '\\\\')
     
     try:
        mkvmerge(*argv)
